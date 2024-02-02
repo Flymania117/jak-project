@@ -20,7 +20,8 @@ class Voice {
   };
 
   Voice(AllocationType alloc = AllocationType::Managed) : mAlloc(alloc) {}
-  s16Output Run();
+
+  virtual s16Output Run();
 
   void KeyOn();
 
@@ -75,7 +76,7 @@ class Voice {
 
   void Stop() { mADSR.Stop(); }
 
- private:
+ protected:
   union ADPCMHeader {
     u16 bits;
     bitfield<u16, bool, 10, 1> LoopStart;
@@ -89,6 +90,7 @@ class Voice {
   bool mNoise{false};
   bool mENDX{false};
 
+  s16 ApplyVolume(s16 sample, s32 volume);
   void DecodeSamples();
   void UpdateBlockHeader();
 

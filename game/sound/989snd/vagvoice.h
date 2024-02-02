@@ -54,6 +54,9 @@ class VoiceManager {
   void SetPanTable(VolPair* table) { mPanTable = table; };
 
   VolPair MakeVolume(int vol1, int pan1, int vol2, int pan2, int vol3, int pan3);
+  VolPair MakeVolume(int vol1, int pan1, int vol2, int pan2, int vol3, int pan3, bool& soundBehind);
+
+  void limitTotalPan(int pan1, int pan3, int pan2, int& total_pan);
 
   // This is super silly, but it's what 989snd does
   VolPair MakeVolumeB(int sound_vol,

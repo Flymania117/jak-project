@@ -79,7 +79,7 @@ void Voice::UpdateBlockHeader() {
     mLSA = mNAX & ~0x7;
 }
 
-static s16 ApplyVolume(s16 sample, s32 volume) {
+s16 Voice::ApplyVolume(s16 sample, s32 volume) {
   return (sample * volume) >> 15;
 }
 

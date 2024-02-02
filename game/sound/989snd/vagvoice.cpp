@@ -60,20 +60,8 @@ VolPair VoiceManager::MakeVolume(int vol1, int pan1, int vol2, int pan2, int vol
     return {(s16)vol, (s16)vol};
   }
 
-  int total_pan = pan1 + pan3 + pan2;
-  while (total_pan >= 360) {
-    total_pan -= 360;
-  }
-
-  while (total_pan < 0) {
-    total_pan += 360;
-  }
-
-  if (total_pan >= 270) {
-    total_pan -= 270;
-  } else {
-    total_pan += 90;
-  }
+  int total_pan;
+  limitTotalPan(pan1, pan3, pan2, total_pan);
 
   // fmt::print("total pan {}\n", total_pan);
   s16 lvol = 0;
@@ -95,6 +83,68 @@ VolPair VoiceManager::MakeVolume(int vol1, int pan1, int vol2, int pan2, int vol
   // there is a whole bunch of math depending on what the volume was previously?
 
   return {lvol, rvol};
+}
+
+VolPair VoiceManager::MakeVolume(int vol1, int pan1, int vol2, int pan2, int vol3, int pan3, bool& soundBehind) {
+  // Scale up as close as we can to max positive 16bit volume
+  // I'd have just used shifting but I guess this does get closer
+
+  s32 vol = vol1 * 258;
+  vol = (vol * vol2) / 0x7f;
+  vol = (vol * vol3) / 0x7f;
+
+  // volume accurate up to here for sure
+  if (vol == 0) {
+    return {0, 0};
+  }
+
+  if (mStereoOrMono == 1) {
+    return {(s16)vol, (s16)vol};
+  }
+
+  int total_pan;
+  limitTotalPan(pan1, pan3, pan2, total_pan);
+
+  // fmt::print("total pan {}\n", total_pan);
+  s16 lvol = 0;
+  s16 rvol = 0;
+
+  // TODO Presumable for the purposes of some effects this function needs
+  // to know the sign of the previous volume so that it can maintain
+  // it. (For surround audio positioning?)
+      
+  soundBehind = false;
+  if (total_pan < 180) {
+    lvol = (mPanTable[total_pan].left * vol) / 0x3fff;
+    rvol = (mPanTable[total_pan].right * vol) / 0x3fff;
+  } else {
+    if (mStereoOrMono == 0)
+      soundBehind = true;
+    rvol = (mPanTable[total_pan - 180].left * vol) / 0x3fff;
+    lvol = (mPanTable[total_pan - 180].right * vol) / 0x3fff;
+  }
+    
+
+  // TODO rest of this function
+  // there is a whole bunch of math depending on what the volume was previously?
+  fmt::print("total pan {}\n", mStereoOrMono);
+  return {lvol, rvol};
+}
+void VoiceManager::limitTotalPan(int pan1, int pan3, int pan2, int& total_pan) {
+  total_pan = pan1 + pan3 + pan2;
+  while (total_pan >= 360) {
+    total_pan -= 360;
+  }
+
+  while (total_pan < 0) {
+    total_pan += 360;
+  }
+
+  if (total_pan >= 270) {
+    total_pan -= 270;
+  } else {
+    total_pan += 90;
+  }
 }
 
 VolPair VoiceManager::MakeVolumeB(int sound_vol,

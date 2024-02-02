@@ -70,7 +70,7 @@ s32 Grain::snd_SFX_GRAIN_TYPE_TONE(BlockSoundHandler& handler) {
   voice->g_pan = pan;
 
   voice->basevol =
-      handler.m_vm.MakeVolume(127, 0, handler.m_cur_volume, handler.m_cur_pan, vol, pan);
+      handler.m_vm.MakeVolume(127, 0, handler.m_cur_volume, handler.m_cur_pan, vol, pan, voice->soundBehind);
 
   handler.m_vm.StartTone(voice);
   handler.m_voices.emplace_front(voice);

@@ -14,8 +14,10 @@ extern std::array<s8, 32> g_block_reg;
 class BlockSoundVoice : public VagVoice {
  public:
   BlockSoundVoice(Tone& t) : VagVoice(t) {}
+  s16Output Run() override;
   s32 g_vol;
   s32 g_pan;
+  bool soundBehind = false;
 };
 
 class BlockSoundHandler : public SoundHandler {

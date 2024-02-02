@@ -6,6 +6,7 @@
 #include "util.h"
 
 #include "common/log/log.h"
+#include "../common/interp_table.inc"
 
 namespace snd {
 std::array<s8, 32> g_block_reg{};
@@ -232,7 +233,7 @@ void BlockSoundHandler::SetVolPan(s32 vol, s32 pan) {
         continue;
       }
 
-      auto volume = m_vm.MakeVolume(127, 0, m_cur_volume, m_cur_pan, voice->g_vol, voice->g_pan);
+      auto volume = m_vm.MakeVolume(127, 0, m_cur_volume, m_cur_pan, voice->g_vol, voice->g_pan, voice->soundBehind);
       auto left = m_vm.AdjustVolToGroup(volume.left, m_group);
       auto right = m_vm.AdjustVolToGroup(volume.right, m_group);
 
@@ -295,6 +296,49 @@ void BlockSoundHandler::DoGrain() {
   }
 
   m_countdown = m_sfx.Grains[m_next_grain].Delay + ret;
+}
+
+s16Output BlockSoundVoice::Run() {
+  DecodeSamples();
+
+  u32 index = (mCounter & 0x0FF0) >> 4;
+
+  s16 sample = 0;
+  sample = static_cast<s16>(sample + ((mDecodeBuf.Peek(0) * interp_table[index][0]) >> 15));
+  sample = static_cast<s16>(sample + ((mDecodeBuf.Peek(1) * interp_table[index][1]) >> 15));
+  sample = static_cast<s16>(sample + ((mDecodeBuf.Peek(2) * interp_table[index][2]) >> 15));
+  sample = static_cast<s16>(sample + ((mDecodeBuf.Peek(3) * interp_table[index][3]) >> 15));
+
+  s32 step = mPitch;
+  step = std::min(step, 0x3FFF);
+  mCounter += step;
+
+  auto steps = mCounter >> 12;
+  mCounter &= 0xFFF;
+
+  while (steps > 0) {
+    steps--;
+    mDecodeBuf.Pop();
+  }
+
+  sample = ApplyVolume(sample, mADSR.Level());
+  s16 left = ApplyVolume(sample, mVolume.left.GetCurrent());
+  s16 right = ApplyVolume(sample, mVolume.right.GetCurrent());
+
+  s16 mid = 0.5 * (left + right);
+  s16 side = 0.5 * (left - right);
+  if (soundBehind) {
+    mid =  0.5 * (left - right);
+    side =  0.5 * (left + right);
+  } 
+
+  left = mid + side;
+  right = mid - side;
+
+  mADSR.Run();
+  mVolume.Run();
+
+  return s16Output{left, right};
 }
 
 }  // namespace snd
